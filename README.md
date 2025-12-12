@@ -209,7 +209,30 @@ gemimg "A kitten with prominent purple-and-green fur."
 python -m gemimg "A kitten with prominent purple-and-green fur."
 ```
 
-Common options: `-i/--input-images`, `-o/--output-file`, `--aspect-ratio`, `--output-dir`, `-n` (number of images), `--webp`, `--store-prompt`, `-f/--force`. The API key can be provided via `--api-key` or the `GEMINI_API_KEY` environment variable.
+### CLI Options
+
+| Option                 | Description                                                                       |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| `prompt`               | Text prompt for image generation (required)                                       |
+| `-i`, `--input-images` | Paths to input images for editing/compositing                                     |
+| `-o`, `--output-file`  | Output filename (defaults to `output.png`)                                        |
+| `--api-key`            | Gemini API key (or set `GEMINI_API_KEY` env var)                                  |
+| `--model`              | `2.5-flash` (default), `3-pro`, `3.1-flash`                                       |
+| `--aspect-ratio`       | `1:1` (default), `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9` |
+| `--output-dir`         | Directory to save generated images                                                |
+| `-n`                   | Number of images to generate                                                      |
+| `--webp`               | Save as WEBP instead of PNG                                                       |
+| `--store-prompt`       | Store the prompt in image metadata                                                |
+| `-f`, `--force`        | Force overwrite existing files                                                    |
+| `--temperature`        | Generation temperature (default: `1.0`)                                           |
+| `--no-resize`          | Do not resize input images                                                        |
+| `--image-size`         | `1K`, `2K` (default), `4K` — Pro models only                                      |
+| `--system-prompt`      | System prompt — Pro models only                                                   |
+| `--grid`               | Grid dimensions, e.g., `2x2` — Pro models only                                    |
+| `--grid-aspect-ratio`  | Aspect ratio for grid cells (same options as `--aspect-ratio`)                    |
+| `--grid-image-size`    | `1K`, `2K` (default), `4K`                                                        |
+| `--save-grid-original` | Save the original grid image before slicing                                       |
+| `--base-url`           | Alternative Gemini API endpoint                                                   |
 
 ## Gemini 2.5 Flash Image Model Notes
 

@@ -6,11 +6,18 @@ from .gemimg import GemImg
 from .grid import Grid
 from .utils import save_image
 
+MODEL_ALIASES = {
+    "2.5-flash": "gemini-2.5-flash-image",
+    "3-pro": "gemini-3-pro-image-preview",
+    "3.1-flash": "gemini-3.1-flash-image-preview",
+}
+
 
 def main():
     """CLI for generating images with GemImg."""
     parser = argparse.ArgumentParser(
-        description="Generate images using the Gemini API."
+        description="Generate images using the Gemini API.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     parser.add_argument("prompt", help="The text prompt for image generation.")
@@ -29,11 +36,14 @@ def main():
     )
     parser.add_argument(
         "--api-key",
-        default=os.getenv("GEMINI_API_KEY"),
-        help="API key for the Gemini API. Defaults to the GEMINI_API_KEY environment variable.",
+        default=None,
+        help="API key for the Gemini API. Falls back to GEMINI_API_KEY env var.",
     )
     parser.add_argument(
-        "--model", default="gemini-2.5-flash-image", help="The model to use."
+        "--model",
+        default="2.5-flash",
+        choices=["2.5-flash", "3-pro", "3.1-flash", "gemini-2.5-flash-image", "gemini-3-pro-image-preview", "gemini-3.1-flash-image-preview"],
+        help="The model to use for image generation.",
     )
     parser.add_argument(
         "--base-url",
@@ -41,7 +51,10 @@ def main():
         help="Alternative Gemini API endpoint for your organization.",
     )
     parser.add_argument(
-        "--aspect-ratio", default="1:1", help="Aspect ratio of the generated image."
+        "--aspect-ratio",
+        default="1:1",
+        choices=["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
+        help="Aspect ratio of the generated image.",
     )
     parser.add_argument(
         "--no-resize",
@@ -67,27 +80,30 @@ def main():
     parser.add_argument(
         "--image-size",
         default="2K",
-        help="Image size for the generation (Pro models only).",
+        choices=["1K", "2K", "4K"],
+        help="Image size (Pro models only).",
     )
     parser.add_argument(
         "--system-prompt",
         default=None,
-        help="System prompt for the generation (Pro models only).",
+        help="System prompt (Pro models only).",
     )
     parser.add_argument(
         "--grid",
         default=None,
-        help="Grid dimensions as ROWSxCOLS (e.g., 2x2). Pro models only.",
+        help="Grid dimensions as ROWSxCOLS, e.g., 2x2 (Pro models only).",
     )
     parser.add_argument(
         "--grid-aspect-ratio",
         default="1:1",
-        help="Aspect ratio for grid cells (default: 1:1).",
+        choices=["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
+        help="Aspect ratio for grid cells.",
     )
     parser.add_argument(
         "--grid-image-size",
         default="2K",
-        help="Image size for grid generation (default: 2K).",
+        choices=["1K", "2K", "4K"],
+        help="Image size for grid generation.",
     )
     parser.add_argument(
         "--save-grid-original",
@@ -103,7 +119,9 @@ def main():
 
     args = parser.parse_args()
 
-    if not args.api_key:
+    # Fall back to env var for API key
+    api_key = args.api_key or os.getenv("GEMINI_API_KEY")
+    if not api_key:
         parser.error(
             "API key is required. Provide it with --api-key or set the GEMINI_API_KEY environment variable."
         )
@@ -113,7 +131,10 @@ def main():
     else:
         base_url = "https://generativelanguage.googleapis.com"
 
-    gem_img = GemImg(api_key=args.api_key, model=args.model, base_url=base_url)
+    # Resolve model alias to full model name
+    model = MODEL_ALIASES.get(args.model, args.model)
+
+    gem_img = GemImg(api_key=api_key, model=model, base_url=base_url)
 
     # Parse grid dimensions if provided
     grid = None
