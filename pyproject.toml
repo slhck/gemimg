@@ -4,11 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gemimg"
-version = "0.4.0"
-description = "Lightweight wrapper for generating and editing images from Nano Banana / Gemini 2.5 Flash Image."
+version = "0.5.0"
+description = "Lightweight wrapper for generating and editing images with Google's Nano Banana models."
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "Max Woolf", email = "max@minimaxir.com" }]
+maintainers = [{ name = "Werner Robitza" }]
 keywords = ["gemini", "nano-banana", "image generation", "ai"]
 classifiers = []
 requires-python = ">=3.10"
@@ -20,7 +21,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/minimaxir/gemimg"
+Homepage = "https://github.com/slhck/gemimg"
+Repository = "https://github.com/slhck/gemimg"
+Issues = "https://github.com/slhck/gemimg/issues"
+Upstream = "https://github.com/minimaxir/gemimg"
 
 [project.scripts]
 gemimg = "gemimg.__main__:main"

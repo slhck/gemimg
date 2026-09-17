@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 class GemImg:
     api_key: str = field(default=os.getenv("GEMINI_API_KEY"), repr=False)
     client: httpx.Client = field(default_factory=httpx.Client, repr=False)
-    model: str = "gemini-2.5-flash-image"
+    model: str = "gemini-3.1-flash-image"
     base_url: str = field(
         default="https://generativelanguage.googleapis.com", repr=False
     )
@@ -33,13 +33,35 @@ class GemImg:
     def __post_init__(self):
         if not self.api_key:
             raise ValueError(
-                "GEMINI_API_KEY is required. Pass it as `api_key`, set it as an environment variable or in .env file."
+                "GEMINI_API_KEY is required. Pass it as `api_key`, set it as an "
+                "environment variable, or add it to a .env file."
             )
 
     @property
     def is_pro(self) -> bool:
         """Check if the model is a pro variant."""
         return "-pro" in self.model
+
+    @property
+    def is_flash_31(self) -> bool:
+        """Check if the model is Gemini 3.1 Flash Image."""
+        return self.model == "gemini-3.1-flash-image"
+
+    @property
+    def is_flash_lite_31(self) -> bool:
+        """Check if the model is Gemini 3.1 Flash Lite Image."""
+        return self.model == "gemini-3.1-flash-lite-image"
+
+    @property
+    def supported_image_sizes(self) -> tuple[str, ...]:
+        """Return the configurable output sizes supported by the model."""
+        if self.is_flash_31:
+            return ("512", "1K", "2K", "4K")
+        if self.is_pro:
+            return ("1K", "2K", "4K")
+        if self.is_flash_lite_31 or self.model == "gemini-2.5-flash-image":
+            return ("1K",)
+        return ()
 
     def generate(
         self,
@@ -53,9 +75,10 @@ class GemImg:
         webp: bool = False,
         n: int = 1,
         store_prompt: bool = False,
-        image_size: str = "2K",
+        image_size: str = "1K",
         system_prompt: Optional[str] = None,
         grid: Optional[Grid] = None,
+        thinking_level: Optional[str] = None,
     ) -> Optional["ImageGen"]:
         if not prompt and not imgs:
             raise ValueError("Either 'prompt' or 'imgs' must be provided")
@@ -89,28 +112,51 @@ class GemImg:
         if prompt:
             parts.append({"text": prompt.strip()})
 
+        image_config = {
+            "aspectRatio": _validate_aspect(
+                aspect_ratio,
+                is_pro=self.is_pro,
+                supports_extended=self.is_flash_31,
+            )
+        }
+
+        supported_sizes = self.supported_image_sizes
+        if supported_sizes:
+            if image_size not in supported_sizes:
+                choices = ", ".join(repr(size) for size in supported_sizes)
+                raise ValueError(
+                    f"image_size must be one of {choices} for {self.model}"
+                )
+            if self.model != "gemini-2.5-flash-image":
+                image_config["imageSize"] = image_size
+
+        generation_config = {
+            "temperature": temperature,
+            "responseModalities": ["IMAGE"],
+            "responseFormat": {"image": image_config},
+        }
+
+        if thinking_level:
+            if not (self.is_flash_31 or self.is_flash_lite_31):
+                raise ValueError(
+                    "thinking_level is only supported by Gemini 3.1 Flash Image models"
+                )
+            if thinking_level not in ("minimal", "high"):
+                raise ValueError("thinking_level must be 'minimal' or 'high'")
+            generation_config["thinkingConfig"] = {"thinkingLevel": thinking_level}
+
         query_params = {
-            "generationConfig": {
-                "temperature": temperature,
-                "imageConfig": {
-                    "aspectRatio": _validate_aspect(aspect_ratio, self.is_pro)
-                },
-                "responseModalities": ["Image"],
-            },
+            "generationConfig": generation_config,
             "contents": [{"parts": parts}],
         }
 
-        if self.is_pro:
-            if image_size not in ["1K", "2K", "4K"]:
-                raise ValueError("image_size must be one of '1K', '2K', or '4K'")
-            query_params["generationConfig"]["imageConfig"]["imageSize"] = image_size
-            if system_prompt:
-                query_params["system_instruction"] = {
-                    "parts": [{"text": system_prompt.strip()}]
-                }
+        if self.is_pro and system_prompt:
+            query_params["system_instruction"] = {
+                "parts": [{"text": system_prompt.strip()}]
+            }
 
         headers = {"Content-Type": "application/json", "x-goog-api-key": self.api_key}
-        api_url = f"{self.base_url}/v1beta/models/{self.model}:generateContent"
+        api_url = f"{self.base_url.rstrip('/')}/v1/models/{self.model}:generateContent"
 
         try:
             response = self.client.post(
@@ -119,18 +165,29 @@ class GemImg:
         except httpx.TimeoutException:
             logger.error("Request Timeout")
             return None
-        except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error occurred: {e}")
+        except httpx.RequestError as e:
+            logger.error(f"HTTP request failed: {e}")
             return None
 
-        response_data = response.json()
+        try:
+            response_data = response.json()
+        except ValueError:
+            logger.error(
+                f"API returned invalid JSON with status {response.status_code}"
+            )
+            return None
+
         if err := response_data.get("error"):
             logger.error(f"API Response Error: {err['code']} — {err['message']}")
             return None
 
-        usage_metadata = response_data["usageMetadata"]
+        usage_metadata = response_data.get("usageMetadata", {})
         # Check for prohibited content
-        candidates = response_data["candidates"][0]
+        response_candidates = response_data.get("candidates", [])
+        if not response_candidates:
+            logger.error("No candidates are present in the response.")
+            return None
+        candidates = response_candidates[0]
         finish_reason = candidates.get("finishReason")
         if finish_reason in ["PROHIBITED_CONTENT", "NO_IMAGE"]:
             logger.error(f"Image was not generated due to {finish_reason}.")
@@ -145,8 +202,12 @@ class GemImg:
         output_images = [
             b64_to_img(part["inlineData"]["data"])
             for part in response_parts
-            if "inlineData" in part
+            if "inlineData" in part and not part.get("thought", False)
         ]
+
+        if not output_images:
+            logger.error("No final image is present in the response.")
+            return None
 
         # If grid is provided, slice the generated image(s) into subimages
         output_subimages = []

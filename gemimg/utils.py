@@ -35,11 +35,25 @@ VALID_ASPECTS_PRO: Dict[str, Tuple[int, int]] = {
     "21:9": (1584, 672),
 }
 
+# Gemini 3.1 Flash Image aspect ratios (1K resolution)
+VALID_ASPECTS_FLASH_31: Dict[str, Tuple[int, int]] = {
+    **VALID_ASPECTS_PRO,
+    "1:4": (512, 2048),
+    "1:8": (384, 3072),
+    "4:1": (2048, 512),
+    "8:1": (3072, 384),
+}
+
 _VALID_ASPECTS_FLASH_SET = set(VALID_ASPECTS_FLASH.keys())
 _VALID_ASPECTS_PRO_SET = set(VALID_ASPECTS_PRO.keys())
+_VALID_ASPECTS_FLASH_31_SET = set(VALID_ASPECTS_FLASH_31.keys())
 
 # Combine all valid dimensions from both models for image validation
-_ALL_VALID_DIMS = set(VALID_ASPECTS_FLASH.values()) | set(VALID_ASPECTS_PRO.values())
+_ALL_VALID_DIMS = (
+    set(VALID_ASPECTS_FLASH.values())
+    | set(VALID_ASPECTS_PRO.values())
+    | set(VALID_ASPECTS_FLASH_31.values())
+)
 _ALL_VALID_DIMS_SET = (
     _ALL_VALID_DIMS
     | {(w * 2, h * 2) for w, h in _ALL_VALID_DIMS}
@@ -47,13 +61,18 @@ _ALL_VALID_DIMS_SET = (
 )
 
 
-def _validate_aspect(aspect_ratio: str, is_pro: bool = False) -> str:
+def _validate_aspect(
+    aspect_ratio: str,
+    is_pro: bool = False,
+    supports_extended: bool = False,
+) -> str:
     """
     Validate an aspect ratio for the specified model.
 
     Args:
         aspect_ratio: The aspect ratio string to validate (e.g., "16:9")
-        is_pro: Whether validating for Pro model. If False, validates for Flash.
+        is_pro: Whether validating for a Pro model.
+        supports_extended: Whether the model supports 1:4, 1:8, 4:1, and 8:1.
 
     Returns:
         The validated aspect ratio string
@@ -61,8 +80,15 @@ def _validate_aspect(aspect_ratio: str, is_pro: bool = False) -> str:
     Raises:
         ValueError: If the aspect ratio is not supported by the model
     """
-    valid_set = _VALID_ASPECTS_PRO_SET if is_pro else _VALID_ASPECTS_FLASH_SET
-    valid_dict = VALID_ASPECTS_PRO if is_pro else VALID_ASPECTS_FLASH
+    if supports_extended:
+        valid_set = _VALID_ASPECTS_FLASH_31_SET
+        valid_dict = VALID_ASPECTS_FLASH_31
+    elif is_pro:
+        valid_set = _VALID_ASPECTS_PRO_SET
+        valid_dict = VALID_ASPECTS_PRO
+    else:
+        valid_set = _VALID_ASPECTS_FLASH_SET
+        valid_dict = VALID_ASPECTS_FLASH
 
     if aspect_ratio not in valid_set:
         raise ValueError(

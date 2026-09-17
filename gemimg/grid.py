@@ -36,12 +36,14 @@ class Grid:
         """Validate grid parameters."""
         if self.rows < 1 or self.cols < 1:
             raise ValueError(
-                f"Grid dimensions must be positive integers, got rows={self.rows}, cols={self.cols}"
+                "Grid dimensions must be positive integers, got "
+                f"rows={self.rows}, cols={self.cols}"
             )
 
         if self.rows * self.cols > 16:
             logger.warning(
-                f"Grid size {self.rows}x{self.cols} ({self.rows * self.cols} cells) exceeds 16 cells. "
+                f"Grid size {self.rows}x{self.cols} "
+                f"({self.rows * self.cols} cells) exceeds 16 cells. "
                 "This may result in poor image quality or generation failures."
             )
 
@@ -93,7 +95,8 @@ class Grid:
     def __repr__(self) -> str:
         """Return string representation of the Grid."""
         return (
-            f"Grid(rows={self.rows}, cols={self.cols}, aspect_ratio='{self.aspect_ratio}', "
+            f"Grid(rows={self.rows}, cols={self.cols}, "
+            f"aspect_ratio='{self.aspect_ratio}', "
             f"image_size='{self.image_size}', num_images={self.num_images}, "
             f"output_resolution={self.output_resolution})"
         )

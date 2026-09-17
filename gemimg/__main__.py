@@ -8,9 +8,28 @@ from .utils import save_image
 
 MODEL_ALIASES = {
     "2.5-flash": "gemini-2.5-flash-image",
-    "3-pro": "gemini-3-pro-image-preview",
-    "3.1-flash": "gemini-3.1-flash-image-preview",
+    "3-pro": "gemini-3-pro-image",
+    "3.1-flash": "gemini-3.1-flash-image",
+    "3.1-flash-lite": "gemini-3.1-flash-lite-image",
 }
+
+MODEL_CHOICES = [*MODEL_ALIASES, *MODEL_ALIASES.values()]
+ASPECT_RATIOS = [
+    "1:1",
+    "1:4",
+    "1:8",
+    "2:3",
+    "3:2",
+    "3:4",
+    "4:1",
+    "4:3",
+    "4:5",
+    "5:4",
+    "8:1",
+    "9:16",
+    "16:9",
+    "21:9",
+]
 
 
 def main():
@@ -41,8 +60,8 @@ def main():
     )
     parser.add_argument(
         "--model",
-        default="2.5-flash",
-        choices=["2.5-flash", "3-pro", "3.1-flash", "gemini-2.5-flash-image", "gemini-3-pro-image-preview", "gemini-3.1-flash-image-preview"],
+        default="3.1-flash",
+        choices=MODEL_CHOICES,
         help="The model to use for image generation.",
     )
     parser.add_argument(
@@ -53,7 +72,7 @@ def main():
     parser.add_argument(
         "--aspect-ratio",
         default="1:1",
-        choices=["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
+        choices=ASPECT_RATIOS,
         help="Aspect ratio of the generated image.",
     )
     parser.add_argument(
@@ -79,14 +98,20 @@ def main():
     )
     parser.add_argument(
         "--image-size",
-        default="2K",
-        choices=["1K", "2K", "4K"],
-        help="Image size (Pro models only).",
+        default="1K",
+        choices=["512", "1K", "2K", "4K"],
+        help="Image size (availability depends on the model).",
     )
     parser.add_argument(
         "--system-prompt",
         default=None,
         help="System prompt (Pro models only).",
+    )
+    parser.add_argument(
+        "--thinking-level",
+        choices=["minimal", "high"],
+        default=None,
+        help="Thinking level (Gemini 3.1 Flash Image models only).",
     )
     parser.add_argument(
         "--grid",
@@ -96,7 +121,7 @@ def main():
     parser.add_argument(
         "--grid-aspect-ratio",
         default="1:1",
-        choices=["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
+        choices=ASPECT_RATIOS,
         help="Aspect ratio for grid cells.",
     )
     parser.add_argument(
@@ -123,7 +148,8 @@ def main():
     api_key = args.api_key or os.getenv("GEMINI_API_KEY")
     if not api_key:
         parser.error(
-            "API key is required. Provide it with --api-key or set the GEMINI_API_KEY environment variable."
+            "API key is required. Provide it with --api-key or set the "
+            "GEMINI_API_KEY environment variable."
         )
 
     if args.base_url:
@@ -167,6 +193,7 @@ def main():
         image_size=args.image_size,
         system_prompt=args.system_prompt,
         grid=grid,
+        thinking_level=args.thinking_level,
     )
 
     if result and result.images:
@@ -176,7 +203,7 @@ def main():
         output_path = Path(args.output_dir)
         if args.output_file:
             base_name = Path(args.output_file).stem
-            # If an extension is provided in the output file, it overrides the --webp flag
+            # An explicit output extension overrides the --webp flag.
             if Path(args.output_file).suffix:
                 ext = Path(args.output_file).suffix[1:]
         else:

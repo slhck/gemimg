@@ -1,26 +1,28 @@
 # gemimg
 
-gemimg is a lightweight Python package for easily interfacing with Google's [Gemini API](https://ai.google.dev) and the [Nano Banana model](https://deepmind.google/models/gemini/image/) (a.k.a. Gemini 2.5 Flash Image) and Nano Banana Pro with robust features. This tool allows for:
+gemimg is a lightweight Python package for generating and editing images with Google's [Gemini API](https://ai.google.dev) and the [Nano Banana model family](https://deepmind.google/models/gemini/image/). This tool allows you to:
 
 - Create images in many aspect ratios with only a few lines of code!
 - Minimal dependencies, and does not use Google's Client SDK.
 - Handles image I/O, including multi-image I/O and image encoding/decoding.
-- Generates images only: no irrelevant text output
+- Generate images only, without unrelated text output.
 - Utilities for common use cases, such as saving, resizing, and compositing multiple images.
-- Allows [optionally storing the prompt](docs/notebooks/store_prompt_metadata.ipynb) in the PNG metadata.
+- Optionally [store the prompt](docs/notebooks/store_prompt_metadata.ipynb) in PNG metadata.
 
-Although Gemini 2.5 Flash Image can be used for free in [Google AI Studio](https://aistudio.google.com/) or [Google Gemini](https://gemini.google.com/), those interfaces place a visible watermark on their outputs and have generation limits. Using gemimg and the Gemini API directly, not only do you have more programmatic control over the generation, but it's much easier to do more complex inputs which increases productivity for power users.
+This repository is an actively maintained hard fork of [minimaxir/gemimg](https://github.com/minimaxir/gemimg).
+
+Although Nano Banana can be used in [Google AI Studio](https://aistudio.google.com/) or [Google Gemini](https://gemini.google.com/), using gemimg and the Gemini API directly gives you programmatic control and makes complex inputs easier to automate.
 
 ## Installation
 
-gemimg can be installed [from PyPI](https://pypi.org/project/gemimg/):
+Install the maintained fork directly from GitHub:
 
 ```sh
-pip3 install gemimg
+pip install git+https://github.com/slhck/gemimg.git
 ```
 
 ```sh
-uv pip install gemimg
+uv pip install git+https://github.com/slhck/gemimg.git
 ```
 
 ## Demo
@@ -35,13 +37,20 @@ g = GemImg(api_key="AI...")
 
 You can also pass the API key by storing it in an `.env` file with a `GEMINI_API_KEY` field in the working directory (recommended), or by setting the environment variable of `GEMINI_API_KEY` directly to the API key.
 
-If you want to generate from Nano Banana Pro, you can specify the `model`:
+Gemini 3.1 Flash Image (Nano Banana 2) is the default. You can select another model by its full API ID:
 
 ```py3
 from gemimg import GemImg
 
-g = GemImg(model="gemini-3-pro-image-preview")
+g = GemImg(model="gemini-3-pro-image")
 ```
+
+The supported model family includes:
+
+- `gemini-3.1-flash-image`: the recommended default, with `512`, `1K`, `2K`, and `4K` output.
+- `gemini-3.1-flash-lite-image`: the lowest-latency option, with `1K` output.
+- `gemini-3-pro-image`: the highest-quality option for complex professional assets, with `1K`, `2K`, and `4K` output.
+- `gemini-2.5-flash-image`: the legacy Nano Banana model, with fixed 1K-class output.
 
 Now, you can generate images with a simple text prompt!
 
@@ -156,7 +165,7 @@ One cost-effective way to generate images is to generate multiple images simulta
 ```py3
 from gemimg import GemImg, Grid
 
-g = GemImg(model="gemini-3-pro-image-preview")
+g = GemImg(model="gemini-3-pro-image")
 
 # Create a 2x2 grid configuration
 grid = Grid(rows=2, cols=2, image_size="2K")
@@ -211,32 +220,32 @@ python -m gemimg "A kitten with prominent purple-and-green fur."
 
 ### CLI Options
 
-| Option                 | Description                                                                       |
-| ---------------------- | --------------------------------------------------------------------------------- |
-| `prompt`               | Text prompt for image generation (required)                                       |
-| `-i`, `--input-images` | Paths to input images for editing/compositing                                     |
-| `-o`, `--output-file`  | Output filename (defaults to `output.png`)                                        |
-| `--api-key`            | Gemini API key (or set `GEMINI_API_KEY` env var)                                  |
-| `--model`              | `2.5-flash` (default), `3-pro`, `3.1-flash`                                       |
-| `--aspect-ratio`       | `1:1` (default), `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9` |
-| `--output-dir`         | Directory to save generated images                                                |
-| `-n`                   | Number of images to generate                                                      |
-| `--webp`               | Save as WEBP instead of PNG                                                       |
-| `--store-prompt`       | Store the prompt in image metadata                                                |
-| `-f`, `--force`        | Force overwrite existing files                                                    |
-| `--temperature`        | Generation temperature (default: `1.0`)                                           |
-| `--no-resize`          | Do not resize input images                                                        |
-| `--image-size`         | `1K`, `2K` (default), `4K` — Pro models only                                      |
-| `--system-prompt`      | System prompt — Pro models only                                                   |
-| `--grid`               | Grid dimensions, e.g., `2x2` — Pro models only                                    |
-| `--grid-aspect-ratio`  | Aspect ratio for grid cells (same options as `--aspect-ratio`)                    |
-| `--grid-image-size`    | `1K`, `2K` (default), `4K`                                                        |
-| `--save-grid-original` | Save the original grid image before slicing                                       |
-| `--base-url`           | Alternative Gemini API endpoint                                                   |
+- `prompt`: Text prompt for image generation (required).
+- `-i`, `--input-images`: Paths to input images for editing or compositing.
+- `-o`, `--output-file`: Output filename; defaults to `output.png`.
+- `--api-key`: Gemini API key; defaults to `GEMINI_API_KEY`.
+- `--model`: `3.1-flash` (default), `3.1-flash-lite`, `3-pro`, `2.5-flash`, or the corresponding full model ID.
+- `--aspect-ratio`: Standard ratios plus `1:4`, `1:8`, `4:1`, and `8:1` for Gemini 3.1 Flash Image.
+- `--image-size`: `512`, `1K` (default), `2K`, or `4K`, depending on the model.
+- `--thinking-level`: `minimal` or `high` for Gemini 3.1 Flash Image models.
+- `--output-dir`: Directory for generated images.
+- `-n`: Number of images to generate.
+- `--webp`: Save as WebP instead of PNG.
+- `--store-prompt`: Store the prompt in image metadata.
+- `-f`, `--force`: Overwrite existing output files.
+- `--temperature`: Generation temperature; defaults to `1.0`.
+- `--no-resize`: Do not resize input images.
+- `--system-prompt`: System prompt for Pro models.
+- `--grid`: Grid dimensions such as `2x2`; Pro models only.
+- `--grid-aspect-ratio`: Aspect ratio for grid cells.
+- `--grid-image-size`: `1K`, `2K` (default), or `4K`.
+- `--save-grid-original`: Save the original grid image before slicing.
+- `--base-url`: Alternative Gemini API endpoint.
 
-## Gemini 2.5 Flash Image Model Notes
+## Model Notes
 
-- Gemini 2.5 Flash Image cannot do style transfer, e.g. `turn me into Studio Ghibli`, and seems to ignore commands that try to do so. Google's [developer documentation example](https://ai.google.dev/gemini-api/docs/image-generation#3_style_transfer) of style transfer unintentionally demonstrates this by [incorrectly applying](https://x.com/minimaxir/status/1963431053193810129) the specified style. The only way to shift the style is to generate a completely new image in that style, which can still have mixed results if the source style is intrinsic.
+- The detailed observations below were made with the legacy Gemini 2.5 Flash Image model and may not apply to Gemini 3 models.
+- Gemini 2.5 Flash Image cannot reliably do style transfer, e.g. `turn me into Studio Ghibli`, and may ignore commands that try to do so. The only way to shift the style is to generate a completely new image in that style, which can still have mixed results if the source style is intrinsic.
   - This also causes issues with the "put subject from Image A into Image B" use case if either are a substantially different style.
 - Gemini 2.5 Flash Image does have moderation in the form of both prompt moderation and post-generation image moderation, although it's more leient than typical for Google's services. If an image is moderated or otherwise not present in the output, a `PROHIBITED_CONTENT` or `NO_IMAGE` error will be logged: the function will return `None` to make it easier to detect and rerun if needed.
 - Gemini 2.5 Flash Image is unsurprisingly bad at free-form text generation, both in terms of text fidelity and frequency of typos. However, a workaround is to provide the rendered text as an input image, and ask the model to composite it with another image.
@@ -246,7 +255,7 @@ python -m gemimg "A kitten with prominent purple-and-green fur."
 
 ## Miscellaneous Notes
 
-- gemimg is intended to be bespoke and very tightly scoped. **Compatibility for other image generation APIs and/or endpoints will not be supported**, unless they follow the identical APIs (i.e. a hypothetical `gemini-3-flash-image`). As this repository is designed to be future-proof, there likely will not be many updates other than bug/compatability fixes.
+- gemimg is intentionally tightly scoped to Gemini's native image-generation models. Compatibility with unrelated image-generation APIs is out of scope.
 - gemimg intentionally does not support true multiturn conversations within a single conversational thread as:
   1. The technical lift for doing so would no longer make this package lightweight
   2. It is unclear if it's actually better for the typical use cases.
@@ -262,9 +271,11 @@ python -m gemimg "A kitten with prominent purple-and-green fur."
 - Async support (for parallel calls and [FastAPI](https://fastapi.tiangolo.com) support)
 - Additional model parameters if the Gemini API supports them.
 
-## Maintainer/Creator
+## Maintainers
 
-Max Woolf ([@minimaxir](https://minimaxir.com))
+This fork is maintained by Werner Robitza ([@slhck](https://github.com/slhck)).
+
+gemimg was created by Max Woolf ([@minimaxir](https://minimaxir.com)).
 
 _Max's open-source projects are supported by his [Patreon](https://www.patreon.com/minimaxir) and [GitHub Sponsors](https://github.com/sponsors/minimaxir). If you found this project helpful, any monetary contributions to the Patreon are appreciated and will be put to good creative use._
 
