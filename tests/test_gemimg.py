@@ -74,7 +74,7 @@ class GemImgRequestTests(unittest.TestCase):
         config = payload["generationConfig"]
         self.assertEqual(config["responseModalities"], ["IMAGE"])
         self.assertEqual(
-            config["responseFormat"]["image"],
+            config["imageConfig"],
             {"aspectRatio": "1:8", "imageSize": "512"},
         )
         self.assertEqual(config["thinkingConfig"], {"thinkingLevel": "high"})
@@ -89,7 +89,7 @@ class GemImgRequestTests(unittest.TestCase):
         generator.generate("test", save=False)
 
         payload = json.loads(self.requests[0].content)
-        image_config = payload["generationConfig"]["responseFormat"]["image"]
+        image_config = payload["generationConfig"]["imageConfig"]
         self.assertNotIn("imageSize", image_config)
 
     def test_model_specific_options_are_validated(self):

@@ -133,7 +133,7 @@ class GemImg:
         generation_config = {
             "temperature": temperature,
             "responseModalities": ["IMAGE"],
-            "responseFormat": {"image": image_config},
+            "imageConfig": image_config,
         }
 
         if thinking_level:
